@@ -21,14 +21,15 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart2, BookOpen, FileText, LogOut, PanelLeft, TrendingUp } from "lucide-react";
+import { BarChart2, BookOpen, FileText, Home, LogOut, PanelLeft, TrendingUp } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: TrendingUp, label: "Watchlist", path: "/" },
+  { icon: Home, label: "Dashboard", path: "/" },
+  { icon: TrendingUp, label: "Watchlist", path: "/watchlist" },
   { icon: FileText, label: "Relatórios Diários", path: "/reports" },
   { icon: BookOpen, label: "Notas & Observações", path: "/notes" },
 ];
