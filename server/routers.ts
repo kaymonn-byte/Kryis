@@ -30,10 +30,55 @@ import {
   getInsightById,
   updateInsight,
   getInsightsStats,
+  createMorningAnalysis,
+  getMorningAnalyses,
+  getMorningAnalysisByDate,
 } from "./db";
+
+import { callDataApi } from "./_core/dataApi";
 
 // ─── Market Data Helpers ──────────────────────────────────────────────────────
 
+// Lista expandida de ativos monitorados — ações, FIIs, BDRs, ETFs, índices
+const ALL_TICKERS = [
+  // Blue chips e IBOV
+  "PETR4", "VALE3", "ITUB4", "BBDC4", "ABEV3", "WEGE3", "RENT3", "BBAS3",
+  "SUZB3", "JBSS3", "GGBR4", "PRIO3", "RADL3", "EGIE3", "LREN3", "CPLE3",
+  "HYPE3", "MULT3", "VIVT3", "ITSA4", "NEOE3", "CSAN3", "BPAC11", "RDOR3",
+  // Small/mid caps com potencial
+  "DIRR3", "MDIA3", "SMFT3", "PETZ3", "RECV3", "RRRP3", "CMIN3", "BRAP4",
+  // FIIs
+  "MXRF11", "HGLG11", "KNRI11", "XPML11", "VISC11",
+  // ETFs
+  "BOVA11", "SMAL11", "IVVB11",
+  // Índices
+  "^BVSP", "USDBRL=X",
+];
+
+// Yahoo Finance via Manus Data API
+async function fetchYahooQuote(ticker: string) {
+  try {
+    const suffix = ticker.includes("^") || ticker.includes("=") ? "" : ".SA";
+    const symbol = ticker.endsWith(".SA") || ticker.includes("^") || ticker.includes("=") ? ticker : `${ticker}${suffix}`;
+    const data = await callDataApi("YahooFinance/get-stock-data", {
+      query: { symbol, interval: "1d", range: "3mo" },
+    }) as any;
+    return data || null;
+  } catch { return null; }
+}
+
+async function fetchYahooHistory(ticker: string, range = "3mo", interval = "1d") {
+  try {
+    const suffix = ticker.includes("^") || ticker.includes("=") ? "" : ".SA";
+    const symbol = ticker.endsWith(".SA") || ticker.includes("^") || ticker.includes("=") ? ticker : `${ticker}${suffix}`;
+    const data = await callDataApi("YahooFinance/get-stock-data", {
+      query: { symbol, interval, range },
+    }) as any;
+    return data || null;
+  } catch { return null; }
+}
+
+// Fallback para brapi.dev se Yahoo falhar
 async function fetchBrapiQuote(ticker: string) {
   try {
     const url = `https://brapi.dev/api/quote/${ticker}?interval=1d&range=3mo&fundamental=true`;
@@ -48,6 +93,43 @@ async function fetchBrapiHistory(ticker: string, range = "3mo", interval = "1d")
     const res = await axios.get(url, { timeout: 10000 });
     return res.data?.results?.[0] || null;
   } catch { return null; }
+}
+
+// Unified quote fetcher: tenta Yahoo primeiro, fallback para brapi
+async function fetchQuote(ticker: string) {
+  const yahoo = await fetchYahooQuote(ticker);
+  if (yahoo && (yahoo.regularMarketPrice || yahoo.price)) return normalizeYahoo(yahoo, ticker);
+  return fetchBrapiQuote(ticker);
+}
+
+async function fetchHistory(ticker: string, range = "3mo", interval = "1d") {
+  const yahoo = await fetchYahooHistory(ticker, range, interval);
+  if (yahoo && (yahoo.regularMarketPrice || yahoo.price)) return normalizeYahooHistory(yahoo, ticker);
+  return fetchBrapiHistory(ticker, range, interval);
+}
+
+function normalizeYahoo(data: any, ticker: string) {
+  const meta = data.meta || data;
+  const quotes = data.quotes || data.historicalDataPrice || [];
+  return {
+    symbol: ticker,
+    shortName: meta.shortName || meta.longName || ticker,
+    regularMarketPrice: meta.regularMarketPrice || meta.price || 0,
+    regularMarketChange: meta.regularMarketChange || 0,
+    regularMarketChangePercent: meta.regularMarketChangePercent || 0,
+    regularMarketVolume: meta.regularMarketVolume || 0,
+    marketCap: meta.marketCap || 0,
+    fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh || 0,
+    fiftyTwoWeekLow: meta.fiftyTwoWeekLow || 0,
+    historicalDataPrice: quotes.map((q: any) => ({
+      date: q.date || q.timestamp,
+      open: q.open, high: q.high, low: q.low, close: q.close, volume: q.volume,
+    })),
+  };
+}
+
+function normalizeYahooHistory(data: any, ticker: string) {
+  return normalizeYahoo(data, ticker);
 }
 
 function calcRSI(closes: number[], period = 14): number {
@@ -143,18 +225,18 @@ function calcFiscal(ops: any[]) {
 
 const marketRouter = router({
   getQuote: publicProcedure
-    .input(z.object({ ticker: z.string().min(1).max(10) }))
+    .input(z.object({ ticker: z.string().min(1).max(20) }))
     .query(async ({ input }) => {
-      const data = await fetchBrapiQuote(input.ticker.toUpperCase());
+      const data = await fetchQuote(input.ticker.toUpperCase());
       if (!data) throw new Error(`Dados não encontrados para ${input.ticker}`);
       return data;
     }),
 
   getTechnicalAnalysis: publicProcedure
-    .input(z.object({ ticker: z.string().min(1).max(10), range: z.string().default("3mo") }))
+    .input(z.object({ ticker: z.string().min(1).max(20), range: z.string().default("3mo") }))
     .query(async ({ input }) => {
       const ticker = input.ticker.toUpperCase();
-      const data = await fetchBrapiHistory(ticker, input.range, "1d");
+      const data = await fetchHistory(ticker, input.range, "1d");
       if (!data) throw new Error(`Dados técnicos não encontrados para ${ticker}`);
       const historicalData = data.historicalDataPrice || [];
       if (historicalData.length === 0) throw new Error(`Sem histórico para ${ticker}`);
@@ -194,36 +276,64 @@ const marketRouter = router({
       };
     }),
 
+  // Cotações em tempo real para o Dashboard — atualiza a cada chamada
   getDashboardQuotes: publicProcedure.query(async () => {
-    const tickers = ["PETR4", "VALE3", "ITUB4", "WEGE3", "ABEV3", "BBAS3", "RENT3", "EGIE3", "PRIO3", "RADL3"];
-    const results = await Promise.allSettled(
-      tickers.map(async (ticker) => {
-        const url = `https://brapi.dev/api/quote/${ticker}?fundamental=false`;
-        const res = await axios.get(url, { timeout: 8000 });
-        return res.data?.results?.[0] || null;
-      })
-    );
-    return results.filter(r => r.status === "fulfilled" && r.value).map(r => (r as PromiseFulfilledResult<any>).value);
+    const tickers = ["PETR4", "VALE3", "ITUB4", "BBDC4", "WEGE3", "BBAS3", "PRIO3", "EGIE3", "CPLE3", "HYPE3"];
+    const results = await Promise.allSettled(tickers.map(t => fetchQuote(t)));
+    return results
+      .filter(r => r.status === "fulfilled" && r.value)
+      .map(r => (r as PromiseFulfilledResult<any>).value);
   }),
+
+  // Overview do mercado: Ibovespa, Dólar, Brent
+  getMarketOverview: publicProcedure.query(async () => {
+    const [ibov, dolar] = await Promise.allSettled([
+      fetchQuote("^BVSP"),
+      fetchQuote("USDBRL=X"),
+    ]);
+    return {
+      ibovespa: ibov.status === "fulfilled" ? ibov.value : null,
+      dolar: dolar.status === "fulfilled" ? dolar.value : null,
+      timestamp: new Date().toISOString(),
+    };
+  }),
+
+  // Busca todos os ativos monitorados
+  getAllTickers: publicProcedure.query(() => ALL_TICKERS),
+
+  // Análises de abertura
+  morningAnalyses: publicProcedure
+    .input(z.object({ limit: z.number().default(10) }).optional())
+    .query(async ({ input }) => getMorningAnalyses(input?.limit ?? 10)),
+
+  morningAnalysisByDate: publicProcedure
+    .input(z.object({ date: z.string() }))
+    .query(async ({ input }) => getMorningAnalysisByDate(input.date)),
 });
 
 // ─── Scanner Router ───────────────────────────────────────────────────────────
 
 const scannerRouter = router({
   scan: publicProcedure
-    .input(z.object({ filter: z.enum(["all", "buy", "sell", "oversold", "overbought"]).default("all"), limit: z.number().default(20) }))
+    .input(z.object({
+      filter: z.enum(["all", "buy", "sell", "oversold", "overbought"]).default("all"),
+      limit: z.number().default(30),
+    }))
     .query(async ({ input }) => {
-      const tickers = ["PETR4", "VALE3", "ITUB4", "BBDC4", "ABEV3", "WEGE3", "RENT3", "LREN3", "BBAS3", "SUZB3", "JBSS3", "GGBR4", "PRIO3", "RADL3", "EGIE3"];
+      // Usa lista expandida de ações (sem índices e ETFs para análise técnica)
+      const tickers = ALL_TICKERS.filter(t => !t.includes("^") && !t.includes("=") && !t.endsWith("11") || ["MXRF11", "HGLG11", "KNRI11", "BOVA11", "SMAL11"].includes(t));
       const results: any[] = [];
       await Promise.allSettled(
-        tickers.slice(0, 15).map(async (ticker) => {
+        tickers.map(async (ticker) => {
           try {
-            const data = await fetchBrapiHistory(ticker, "3mo", "1d");
+            const data = await fetchHistory(ticker, "3mo", "1d");
             if (!data) return;
             const historicalData = data.historicalDataPrice || [];
             if (historicalData.length < 15) return;
             const closes = historicalData.map((d: any) => d.close).filter(Boolean);
             const volumes = historicalData.map((d: any) => d.volume).filter(Boolean);
+            const highs = historicalData.map((d: any) => d.high).filter(Boolean);
+            const lows = historicalData.map((d: any) => d.low).filter(Boolean);
             const rsi = calcRSI(closes);
             const macd = calcMACD(closes);
             const ema9 = calcEMA(closes, 9);
@@ -231,14 +341,19 @@ const scannerRouter = router({
             const trend = ema9[ema9.length - 1] > ema21[ema21.length - 1] ? "Alta" : "Baixa";
             const pattern = detectPattern(closes, volumes);
             const signal = rsi < 35 ? "COMPRA" : rsi > 65 ? "VENDA" : "NEUTRO";
-            const score = Math.round(
-              (rsi < 40 ? 30 : rsi > 60 ? 10 : 20) +
-              (macd.histogram > 0 ? 20 : 10) +
-              (trend === "Alta" ? 20 : 10) +
-              (data.regularMarketChangePercent > 0 ? 15 : 5) +
-              15
-            );
-            results.push({ ticker, price: data.regularMarketPrice, change: data.regularMarketChangePercent, rsi, macd: macd.histogram, trend, pattern, signal, score });
+            // Score agressivo: prioriza sinais fortes de compra e venda
+            const rsiScore = rsi < 30 ? 40 : rsi < 40 ? 25 : rsi > 70 ? 40 : rsi > 60 ? 25 : 10;
+            const macdScore = Math.abs(macd.histogram) > 0.5 ? 25 : macd.histogram !== 0 ? 15 : 5;
+            const trendScore = trend === "Alta" ? 20 : 10;
+            const changeScore = Math.abs(data.regularMarketChangePercent || 0) > 3 ? 15 : 5;
+            const score = Math.round(rsiScore + macdScore + trendScore + changeScore);
+            // Stop loss e stop gain sugeridos
+            const currentPrice = data.regularMarketPrice || closes[closes.length - 1];
+            const maxHigh = Math.max(...highs.slice(-20));
+            const minLow = Math.min(...lows.slice(-20));
+            const stopLoss = signal === "COMPRA" ? parseFloat((currentPrice * 0.95).toFixed(2)) : parseFloat((currentPrice * 1.05).toFixed(2));
+            const stopGain = signal === "COMPRA" ? parseFloat((currentPrice * 1.10).toFixed(2)) : parseFloat((currentPrice * 0.90).toFixed(2));
+            results.push({ ticker, price: currentPrice, change: data.regularMarketChangePercent, rsi, macd: macd.histogram, trend, pattern, signal, score, stopLoss, stopGain, high52w: maxHigh, low52w: minLow });
           } catch { /* skip */ }
         })
       );

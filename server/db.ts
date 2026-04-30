@@ -4,10 +4,12 @@ import {
   InsertUser,
   analyses,
   daily_reports,
+  morning_analyses,
   ticker_notes,
   users,
   type InsertAnalysis,
   type InsertDailyReport,
+  type InsertMorningAnalysis,
   type InsertTickerNote,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -316,4 +318,25 @@ export async function getInsightsStats() {
     assertive: assertiveCount,
     assertiveRate: closed.length > 0 ? Math.round((assertiveCount / closed.length) * 100) : 0,
   };
+}
+
+// ─── Morning Analyses ─────────────────────────────────────────────────────────
+
+export async function createMorningAnalysis(data: InsertMorningAnalysis) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(morning_analyses).values(data);
+}
+
+export async function getMorningAnalyses(limit = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(morning_analyses).orderBy(desc(morning_analyses.createdAt)).limit(limit);
+}
+
+export async function getMorningAnalysisByDate(date: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(morning_analyses).where(eq(morning_analyses.date, date)).limit(1);
+  return result[0];
 }

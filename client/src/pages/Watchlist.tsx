@@ -39,6 +39,15 @@ function ScoreBar({ score }: { score: number }) {
 
 export default function Watchlist() {
   const { data, isLoading, error } = trpc.watchlist.latest.useQuery();
+  // Cotações em tempo real — atualiza a cada 60 segundos
+  const { data: liveQuotes } = trpc.market.getDashboardQuotes.useQuery(
+    undefined,
+    { refetchInterval: 60000, staleTime: 30000 }
+  );
+  // Mapeia ticker -> cotação ao vivo
+  const quoteMap = liveQuotes
+    ? Object.fromEntries(liveQuotes.map((q: any) => [q.symbol, q]))
+    : {};
 
   return (
     <DashboardLayout>
@@ -103,6 +112,24 @@ export default function Watchlist() {
                   </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-3">
+                  {/* Preço ao vivo */}
+                  {quoteMap[item.ticker] && (
+                    <div className="flex items-center justify-between p-2 rounded bg-muted/20 border border-border/30">
+                      <span className="text-sm font-bold font-mono text-foreground">
+                        R$ {quoteMap[item.ticker].regularMarketPrice?.toFixed(2) ?? "—"}
+                      </span>
+                      <span className={`text-xs font-medium ${
+                        (quoteMap[item.ticker].regularMarketChangePercent ?? 0) > 0
+                          ? "text-emerald-400"
+                          : (quoteMap[item.ticker].regularMarketChangePercent ?? 0) < 0
+                            ? "text-red-400"
+                            : "text-muted-foreground"
+                      }`}>
+                        {(quoteMap[item.ticker].regularMarketChangePercent ?? 0) > 0 ? "+" : ""}
+                        {(quoteMap[item.ticker].regularMarketChangePercent ?? 0).toFixed(2)}%
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <div className="flex items-end gap-1">
                       <span className={`text-3xl font-bold font-mono ${scoreColor(item.score)}`}>

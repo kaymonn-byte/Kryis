@@ -50,3 +50,20 @@
 - [x] Página Insights: entrada/saída, risco/retorno, status, histórico de assertividade
 - [x] DashboardLayout com 9 itens de menu
 - [x] Sincronização com GitHub kaymonn-byte/Kryis
+
+## Evolução v3 — Dinâmica, Insights e Aprendizado
+
+- [ ] Router tRPC `market.quotes` — busca cotações em tempo real via Yahoo Finance para lista de tickers
+- [ ] Router tRPC `market.quote` — cotação individual de um ativo
+- [ ] Router tRPC `market.overview` — Ibovespa, Dólar, Selic, Petróleo em tempo real
+- [ ] Dashboard dinâmico — cotações atualizadas automaticamente ao entrar na ferramenta
+- [ ] Watchlist dinâmica — preço atual, variação % e volume ao lado de cada ativo
+- [ ] Insights aprimorados — stop gain explícito, assertividade acumulada, taxa de acerto %
+- [ ] Página de Abertura — análise sugestiva gerada pelo agente no início do pregão
+- [ ] Endpoint POST /api/scheduled/morning-analysis — análise de abertura com sugestões agressivas
+- [ ] Endpoint POST /api/scheduled/daily-report atualizado — registrar fechamento com cotações reais
+- [ ] Lista expandida de ativos monitorados — ações, FIIs, BDRs, cripto, índices (50+ ativos)
+- [ ] Tabela `morning_analyses` no banco para análises de abertura
+- [ ] Scanner dinâmico — busca oportunidades em tempo real com filtros técnicos
+- [ ] Página de Aprendizado — taxa de acerto histórica, melhores/piores insights, evolução temporal
+- [ ] Sincronização GitHub após todas as mudanças

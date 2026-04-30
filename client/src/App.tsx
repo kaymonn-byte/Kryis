@@ -14,6 +14,7 @@ import ChatKryis from "./pages/ChatKryis";
 import Operations from "./pages/Operations";
 import Scanner from "./pages/Scanner";
 import FiscalPanel from "./pages/FiscalPanel";
+import MorningAnalysis from "./pages/MorningAnalysis";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/notes" component={Notes} />
       <Route path="/operations" component={Operations} />
       <Route path="/fiscal" component={FiscalPanel} />
+      <Route path="/morning" component={MorningAnalysis} />
       <Route path="/ticker/:ticker" component={TickerDetail} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

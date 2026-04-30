@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart2, BookOpen, DollarSign, FileText, Home, LogOut, MessageSquare, PanelLeft, Radar, TrendingUp, Zap } from "lucide-react";
+import { BarChart2, BookOpen, DollarSign, FileText, Home, Lightbulb, LogOut, MessageSquare, PanelLeft, Radar, TrendingUp, Zap } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -32,6 +32,7 @@ const menuItems = [
   { icon: Zap, label: "Insights", path: "/insights" },
   { icon: MessageSquare, label: "Chat KRYIS", path: "/chat" },
   { icon: TrendingUp, label: "Watchlist", path: "/watchlist" },
+  { icon: Lightbulb, label: "Análise de Abertura", path: "/morning" },
   { icon: Radar, label: "Scanner", path: "/scanner" },
   { icon: FileText, label: "Relatórios Diários", path: "/reports" },
   { icon: BookOpen, label: "Notas & Observações", path: "/notes" },

@@ -175,6 +175,8 @@ export const insights = mysqlTable("insights", {
   targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }),
   /** Stop loss */
   stopLoss: decimal("stopLoss", { precision: 10, scale: 2 }),
+  /** Stop gain (alvo de realização parcial) */
+  stopGain: decimal("stopGain", { precision: 10, scale: 2 }),
   /** Relação risco/retorno calculada */
   riskReward: decimal("riskReward", { precision: 6, scale: 2 }),
   /** Tese resumida do insight */
@@ -199,3 +201,26 @@ export const insights = mysqlTable("insights", {
 
 export type Insight = typeof insights.$inferSelect;
 export type InsertInsight = typeof insights.$inferInsert;
+
+// ─── morning_analyses (análises de abertura geradas pelo agente) ───────────────
+export const morning_analyses = mysqlTable("morning_analyses", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Date in YYYY-MM-DD format */
+  date: varchar("date", { length: 10 }).notNull(),
+  /** Market context at opening */
+  marketContext: text("market_context"),
+  /** Main opportunities identified */
+  opportunities: text("opportunities"),
+  /** Key risks for the day */
+  risks: text("risks"),
+  /** Suggested watchlist tickers (JSON array) */
+  suggestedTickers: text("suggested_tickers"),
+  /** Full analysis text */
+  fullAnalysis: text("full_analysis"),
+  /** Aggressiveness level: conservador, moderado, agressivo */
+  aggressiveness: varchar("aggressiveness", { length: 20 }).default("agressivo"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MorningAnalysis = typeof morning_analyses.$inferSelect;
+export type InsertMorningAnalysis = typeof morning_analyses.$inferInsert;

@@ -70,6 +70,15 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { data: reports, isLoading: reportsLoading } = trpc.reports.list.useQuery({ limit: 1 });
   const { data: watchlist, isLoading: watchlistLoading } = trpc.watchlist.latest.useQuery();
+  // Cotações em tempo real — atualiza a cada 60 segundos
+  const { data: liveQuotes, isLoading: quotesLoading } = trpc.market.getDashboardQuotes.useQuery(
+    undefined,
+    { refetchInterval: 60000, staleTime: 30000 }
+  );
+  const { data: marketOverview } = trpc.market.getMarketOverview.useQuery(
+    undefined,
+    { refetchInterval: 60000, staleTime: 30000 }
+  );
 
   const latestReport = reports?.[0];
 
@@ -95,6 +104,66 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground mt-1">
             Visão geral do mercado e dos ativos monitorados pelo agente KRYIS.
           </p>
+        </div>
+
+        {/* Cotações em Tempo Real */}
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            <ArrowUpRight className="h-4 w-4 text-emerald-400" />
+            Mercado Agora
+            <span className="text-xs font-normal text-muted-foreground ml-1">(atualiza a cada 60s)</span>
+          </h2>
+          {/* Overview: Ibovespa + Dólar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <Card className="bg-card border-border col-span-1">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-1">Ibovespa</p>
+                {marketOverview?.ibovespa ? (
+                  <>
+                    <p className="text-base font-bold font-mono text-foreground">
+                      {marketOverview.ibovespa.regularMarketPrice?.toLocaleString("pt-BR") ?? "—"}
+                    </p>
+                    <ChangeIndicator change={String(marketOverview.ibovespa.regularMarketChangePercent ?? 0)} />
+                  </>
+                ) : <Skeleton className="h-8 w-full" />}
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border col-span-1">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-1">Dólar (USD/BRL)</p>
+                {marketOverview?.dolar ? (
+                  <>
+                    <p className="text-base font-bold font-mono text-foreground">
+                      R$ {marketOverview.dolar.regularMarketPrice?.toFixed(4) ?? "—"}
+                    </p>
+                    <ChangeIndicator change={String(marketOverview.dolar.regularMarketChangePercent ?? 0)} />
+                  </>
+                ) : <Skeleton className="h-8 w-full" />}
+              </CardContent>
+            </Card>
+          </div>
+          {/* Cotações individuais */}
+          {quotesLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+            </div>
+          ) : liveQuotes && liveQuotes.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {liveQuotes.map((q: any) => (
+                <div
+                  key={q.symbol}
+                  className="p-2 rounded-lg bg-card border border-border cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => navigate(`/ticker/${q.symbol}`)}
+                >
+                  <p className="text-xs font-mono font-bold text-primary">{q.symbol}</p>
+                  <p className="text-sm font-bold font-mono text-foreground">
+                    R$ {q.regularMarketPrice?.toFixed(2) ?? "—"}
+                  </p>
+                  <ChangeIndicator change={String(q.regularMarketChangePercent ?? 0)} />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {/* Métricas do último relatório */}

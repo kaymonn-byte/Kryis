@@ -10,7 +10,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { insertDailyReport, insertTickerNotes, insertAnalyses, getLatestAnalyses, createInsight } from "./db";
+import { insertDailyReport, insertTickerNotes, insertAnalyses, getLatestAnalyses, createInsight, createMorningAnalysis } from "./db";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -185,6 +185,39 @@ export function registerScheduledRoutes(app: Express) {
       res.json({ success: true, ticker: String(body.ticker).toUpperCase() });
     } catch (err) {
       console.error("[scheduled/insight]", err);
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  /**
+   * POST /api/scheduled/morning-analysis
+   */
+  app.post("/api/scheduled/morning-analysis", async (req: Request, res: Response) => {
+    try {
+      const body = req.body ?? {};
+      const date: string = body.date ?? todayDate();
+      if (!body.marketContext) {
+        res.status(400).json({ success: false, error: "marketContext is required" });
+        return;
+      }
+      const suggestionsJson = Array.isArray(body.suggestions) ? JSON.stringify(body.suggestions) : null;
+      await createMorningAnalysis({ date, marketContext: body.marketContext, suggestedTickers: suggestionsJson, risks: body.keyRisks ?? null, opportunities: body.keyOpportunities ?? null, fullAnalysis: body.fullAnalysis ?? null });
+      // Auto-create insights for each suggestion
+      if (Array.isArray(body.suggestions)) {
+        for (const s of body.suggestions) {
+          if (!s.ticker || !s.direction || !s.thesis) continue;
+          try {
+            const entry = Number(s.entryPrice);
+            const target = Number(s.targetPrice);
+            const stop = Number(s.stopLoss);
+            const rr = entry && target && stop && (entry - stop) !== 0 ? parseFloat(((target - entry) / (entry - stop)).toFixed(2)) : undefined;
+            await createInsight({ ticker: String(s.ticker).toUpperCase(), direction: s.direction, entryPrice: safeDecimal(s.entryPrice) as any, targetPrice: safeDecimal(s.targetPrice) as any, stopLoss: safeDecimal(s.stopLoss) as any, stopGain: safeDecimal(s.stopGain) as any, riskReward: rr !== undefined ? String(rr) as any : undefined, thesis: s.thesis, horizon: s.horizon ?? null, context: `Análise de abertura ${date}`, source: "agente" });
+          } catch (_) { /* skip */ }
+        }
+      }
+      res.json({ success: true, date, suggestions: Array.isArray(body.suggestions) ? body.suggestions.length : 0 });
+    } catch (err) {
+      console.error("[scheduled/morning-analysis]", err);
       res.status(500).json({ success: false, error: String(err) });
     }
   });
