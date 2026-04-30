@@ -313,7 +313,7 @@ export default function Insights() {
                             <div className="bg-red-900/20 rounded p-2 text-center border border-red-800/30">
                               <div className="text-xs text-red-400 flex items-center justify-center gap-1"><ShieldAlert className="w-3 h-3" />Stop</div>
                               <div className="text-sm font-bold text-red-400">R$ {stop.toFixed(2)}</div>
-                              {entry > 0 && <div className="text-xs text-red-500">{(((stop - entry) / entry) * 100).toFixed(1)}%</div>}
+                              {entry > 0 && <div className="text-xs text-red-500">{insight.direction === 'venda' ? '+' : ''}{(((stop - entry) / entry) * 100).toFixed(1)}%</div>}
                             </div>
                           )}
                           {rr !== null && (
