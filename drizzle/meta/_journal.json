@@ -15,6 +15,13 @@
       "when": 1777502482760,
       "tag": "0001_needy_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1777517205922,
+      "tag": "0002_chunky_lyja",
+      "breakpoints": true
     }
   ]
 }

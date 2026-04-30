@@ -169,3 +169,151 @@ export async function getAnalysesByTicker(ticker: string, limit = 30) {
     .orderBy(desc(analyses.date))
     .limit(limit);
 }
+
+// ─── Operations ───────────────────────────────────────────────────────────────
+
+import { and, gte, lte } from "drizzle-orm";
+import {
+  InsertOperation,
+  InsertWatchlistItem,
+  InsertTradeReport,
+  InsertChatMessage,
+  InsertInsight,
+  operations,
+  watchlist_items,
+  trade_reports,
+  chat_messages,
+  insights,
+} from "../drizzle/schema";
+
+export async function getOperationsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(operations).where(eq(operations.userId, userId)).orderBy(desc(operations.operationDate));
+}
+
+export async function createOperation(op: InsertOperation) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(operations).values(op);
+}
+
+export async function deleteOperation(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(operations).where(and(eq(operations.id, id), eq(operations.userId, userId)));
+}
+
+export async function getOperationsByPeriod(userId: number, startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(operations)
+    .where(and(eq(operations.userId, userId), gte(operations.operationDate, startDate), lte(operations.operationDate, endDate)))
+    .orderBy(desc(operations.operationDate));
+}
+
+// ─── Watchlist Items ──────────────────────────────────────────────────────────
+
+export async function getWatchlistItemsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(watchlist_items).where(eq(watchlist_items.userId, userId)).orderBy(desc(watchlist_items.createdAt));
+}
+
+export async function addWatchlistItem(item: InsertWatchlistItem) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(watchlist_items).values(item);
+}
+
+export async function removeWatchlistItem(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(watchlist_items).where(and(eq(watchlist_items.id, id), eq(watchlist_items.userId, userId)));
+}
+
+// ─── Trade Reports ────────────────────────────────────────────────────────────
+
+export async function getTradeReportsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(trade_reports).where(eq(trade_reports.userId, userId)).orderBy(desc(trade_reports.createdAt));
+}
+
+export async function createTradeReport(report: InsertTradeReport) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(trade_reports).values(report);
+}
+
+export async function deleteTradeReport(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(trade_reports).where(and(eq(trade_reports.id, id), eq(trade_reports.userId, userId)));
+}
+
+// ─── Chat Messages ────────────────────────────────────────────────────────────
+
+export async function getChatHistory(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chat_messages).where(eq(chat_messages.userId, userId)).orderBy(desc(chat_messages.createdAt)).limit(limit);
+}
+
+export async function saveChatMessage(msg: InsertChatMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(chat_messages).values(msg);
+}
+
+export async function clearChatHistory(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.delete(chat_messages).where(eq(chat_messages.userId, userId));
+}
+
+// ─── Insights ─────────────────────────────────────────────────────────────────
+
+export async function createInsight(data: InsertInsight) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [result] = await db.insert(insights).values(data);
+  return result;
+}
+
+export async function getInsights(status?: "aberta" | "fechada" | "cancelada", limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) {
+    return db.select().from(insights).where(eq(insights.status, status)).orderBy(desc(insights.createdAt)).limit(limit);
+  }
+  return db.select().from(insights).orderBy(desc(insights.createdAt)).limit(limit);
+}
+
+export async function getInsightById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(insights).where(eq(insights.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateInsight(id: number, data: Partial<InsertInsight>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.update(insights).set({ ...data, updatedAt: new Date() } as any).where(eq(insights.id, id));
+}
+
+export async function getInsightsStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, open: 0, closed: 0, assertive: 0, assertiveRate: 0 };
+  const all = await db.select().from(insights).orderBy(desc(insights.createdAt)).limit(1000);
+  const closed = all.filter(i => i.status === "fechada");
+  const assertiveCount = closed.filter(i => i.assertive === true).length;
+  return {
+    total: all.length,
+    open: all.filter(i => i.status === "aberta").length,
+    closed: closed.length,
+    assertive: assertiveCount,
+    assertiveRate: closed.length > 0 ? Math.round((assertiveCount / closed.length) * 100) : 0,
+  };
+}

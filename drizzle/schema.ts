@@ -1,4 +1,5 @@
 import {
+  boolean,
   decimal,
   int,
   mysqlEnum,
@@ -91,3 +92,110 @@ export const analyses = mysqlTable("analyses", {
 
 export type Analysis = typeof analyses.$inferSelect;
 export type InsertAnalysis = typeof analyses.$inferInsert;
+
+// ─── operations ───────────────────────────────────────────────────────────────
+export const operations = mysqlTable("operations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  ticker: varchar("ticker", { length: 10 }).notNull(),
+  type: mysqlEnum("type", ["compra", "venda"]).notNull(),
+  quantity: int("quantity").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  totalValue: decimal("totalValue", { precision: 12, scale: 2 }).notNull(),
+  fees: decimal("fees", { precision: 10, scale: 2 }).default("0"),
+  operationDate: timestamp("operationDate").notNull(),
+  broker: varchar("broker", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Operation = typeof operations.$inferSelect;
+export type InsertOperation = typeof operations.$inferInsert;
+
+// ─── watchlist_items (CRUD user watchlist) ────────────────────────────────────
+export const watchlist_items = mysqlTable("watchlist_items", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  ticker: varchar("ticker", { length: 10 }).notNull(),
+  targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }),
+  stopLoss: decimal("stopLoss", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WatchlistItem = typeof watchlist_items.$inferSelect;
+export type InsertWatchlistItem = typeof watchlist_items.$inferInsert;
+
+// ─── trade_reports (recomendações com tracking de resultado) ──────────────────
+export const trade_reports = mysqlTable("trade_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  ticker: varchar("ticker", { length: 10 }).notNull(),
+  thesis: text("thesis").notNull(),
+  entryPrice: decimal("entryPrice", { precision: 10, scale: 2 }).notNull(),
+  targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }).notNull(),
+  stopLoss: decimal("stopLoss", { precision: 10, scale: 2 }).notNull(),
+  exitPrice: decimal("exitPrice", { precision: 10, scale: 2 }),
+  returnPct: decimal("returnPct", { precision: 8, scale: 4 }),
+  result: mysqlEnum("result", ["pendente", "sucesso", "falha"]).default("pendente").notNull(),
+  horizon: varchar("horizon", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TradeReport = typeof trade_reports.$inferSelect;
+export type InsertTradeReport = typeof trade_reports.$inferInsert;
+
+// ─── chat_messages ────────────────────────────────────────────────────────────
+export const chat_messages = mysqlTable("chat_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chat_messages.$inferSelect;
+export type InsertChatMessage = typeof chat_messages.$inferInsert;
+
+// ─── insights (ideias de trade com aprendizado contínuo) ──────────────────────
+// Cada insight é uma ideia de entrada/saída gerada pelo agente ou pelo usuário.
+// O campo `assertive` é preenchido após o fechamento para rastrear assertividade.
+export const insights = mysqlTable("insights", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Ticker do ativo (ex: PETR4) ou instrumento (ex: DOLAR, IBOV) */
+  ticker: varchar("ticker", { length: 20 }).notNull(),
+  /** Direção da operação */
+  direction: mysqlEnum("direction", ["compra", "venda", "neutro"]).notNull(),
+  /** Preço sugerido de entrada */
+  entryPrice: decimal("entryPrice", { precision: 10, scale: 2 }),
+  /** Preço alvo de saída */
+  targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }),
+  /** Stop loss */
+  stopLoss: decimal("stopLoss", { precision: 10, scale: 2 }),
+  /** Relação risco/retorno calculada */
+  riskReward: decimal("riskReward", { precision: 6, scale: 2 }),
+  /** Tese resumida do insight */
+  thesis: text("thesis").notNull(),
+  /** Horizonte temporal esperado (ex: 1-2 semanas, swing trade) */
+  horizon: varchar("horizon", { length: 100 }),
+  /** Status atual do insight */
+  status: mysqlEnum("status", ["aberta", "fechada", "cancelada"]).default("aberta").notNull(),
+  /** Preço real de saída quando fechado */
+  exitPrice: decimal("exitPrice", { precision: 10, scale: 2 }),
+  /** Retorno percentual real quando fechado */
+  returnPct: decimal("returnPct", { precision: 8, scale: 4 }),
+  /** Se o insight foi assertivo (preenchido ao fechar) */
+  assertive: boolean("assertive"),
+  /** Notas adicionais ou contexto de mercado */
+  context: text("context"),
+  /** Fonte do insight: agente automático ou usuário */
+  source: mysqlEnum("source", ["agente", "usuario"]).default("agente").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Insight = typeof insights.$inferSelect;
+export type InsertInsight = typeof insights.$inferInsert;

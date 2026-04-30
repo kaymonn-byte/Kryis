@@ -33,3 +33,20 @@
 - [x] Página "Análise por Ativo" com histórico de scores e notas de um ticker específico
 - [x] Router tRPC `dashboard.summary` para buscar último relatório + top ativos (via reports.list + watchlist.latest)
 - [x] Navegação com 4 itens: Dashboard, Watchlist, Relatórios, Notas
+
+## Migração v2 + Insights aprimorados
+
+- [ ] Tabelas do v2: operations, watchlist (CRUD), reports (tracking), chat_messages
+- [ ] Tabela insights: ticker, direction, entryPrice, targetPrice, stopLoss, riskReward, thesis, horizon, status, exitPrice, returnPct, assertive, notes
+- [ ] Migration SQL aplicada
+- [ ] DB helpers para operations, watchlist CRUD, reports tracking, chat, insights
+- [ ] Routers tRPC: market, scanner, operations, fiscal, watchlist CRUD, reports tracking, chat, insights
+- [ ] Endpoint /api/scheduled/insight para agente salvar insights automaticamente
+- [ ] Página Análise Técnica com gráfico candlestick
+- [ ] Página Scanner B3
+- [ ] Página Operações (registro compra/venda)
+- [ ] Página Painel Fiscal
+- [ ] Página Chat KRYIS (IA)
+- [ ] Página Insights: entrada/saída, risco/retorno, status, histórico de assertividade
+- [ ] DashboardLayout com todos os itens de menu
+- [ ] Sincronização com GitHub kaymonn-byte/Kryis
