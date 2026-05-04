@@ -67,3 +67,13 @@
 - [ ] Scanner dinâmico — busca oportunidades em tempo real com filtros técnicos
 - [ ] Página de Aprendizado — taxa de acerto histórica, melhores/piores insights, evolução temporal
 - [ ] Sincronização GitHub após todas as mudanças
+
+## Correção de Sincronização (04/05/2026)
+
+- [ ] Verificar datas faltantes no banco do kryis-v3
+- [ ] Repostar dados de 29/04/2026 (daily-report + analyze)
+- [ ] Repostar dados de 30/04/2026 (daily-report + analyze)
+- [ ] Repostar dados de 02/05/2026 se houve pregão
+- [ ] Repostar dados de 04/05/2026 (hoje)
+- [ ] Corrigir código para garantir que o agente sempre usa a URL correta do kryis-v3
+- [ ] Salvar checkpoint e publicar
