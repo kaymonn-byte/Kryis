@@ -50,13 +50,13 @@ export function registerScheduledRoutes(app: Express) {
 
       await insertDailyReport({
         date,
-        ibovespaValue: safeDecimal(body.ibovespa?.value),
-        ibovespaChange: safeDecimal(body.ibovespa?.change),
-        dollarValue: safeDecimal(body.dollar?.value),
-        dollarChange: safeDecimal(body.dollar?.change),
+        ibovespaValue: safeDecimal(body.ibovespaValue ?? body.ibovespa?.value),
+        ibovespaChange: safeDecimal(body.ibovespaChange ?? body.ibovespa?.change),
+        dollarValue: safeDecimal(body.dollarValue ?? body.dollar?.value),
+        dollarChange: safeDecimal(body.dollarChange ?? body.dollar?.change),
         selic: safeDecimal(body.selic),
-        brentValue: safeDecimal(body.brent?.value),
-        brentChange: safeDecimal(body.brent?.change),
+        brentValue: safeDecimal(body.brentValue ?? body.brent?.value),
+        brentChange: safeDecimal(body.brentChange ?? body.brent?.change),
         marketSummary: body.marketSummary ?? null,
         lessonsLearned,
         tomorrowOutlook: body.tomorrowOutlook ?? null,
@@ -112,7 +112,8 @@ export function registerScheduledRoutes(app: Express) {
     try {
       const body = req.body ?? {};
       const date: string = body.date ?? todayDate();
-      const rawTickers: unknown[] = Array.isArray(body.tickers) ? body.tickers : [];
+      // Accept both 'tickers' and 'analyses' field names for backward compatibility
+      const rawTickers: unknown[] = Array.isArray(body.tickers) ? body.tickers : (Array.isArray(body.analyses) ? body.analyses : []);
 
       if (rawTickers.length > 0) {
         const records = rawTickers

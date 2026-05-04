@@ -70,10 +70,16 @@
 
 ## Correção de Sincronização (04/05/2026)
 
-- [ ] Verificar datas faltantes no banco do kryis-v3
-- [ ] Repostar dados de 29/04/2026 (daily-report + analyze)
-- [ ] Repostar dados de 30/04/2026 (daily-report + analyze)
-- [ ] Repostar dados de 02/05/2026 se houve pregão
-- [ ] Repostar dados de 04/05/2026 (hoje)
-- [ ] Corrigir código para garantir que o agente sempre usa a URL correta do kryis-v3
-- [ ] Salvar checkpoint e publicar
+- [x] Verificar datas faltantes no banco do kryis-v3
+- [x] Repostar dados de 29/04/2026 (daily-report + analyze) — já estava no banco
+- [x] Repostar dados de 30/04/2026 (daily-report + analyze) — já estava no banco
+- [x] Repostar dados de 02/05/2026 — NÃO houve pregão (feriado 01/05 + sábado 02/05)
+- [x] Repostar dados de 04/05/2026 (daily-report + analyze + morning-analysis + ticker-notes)
+- [x] Corrigir endpoints para aceitar múltiplos formatos (ibovespaValue/ibovespa.value, tickers/analyses)
+- [x] Salvar checkpoint e publicar
+
+## Pendências Identificadas (04/05/2026)
+
+- [ ] Documentar URL correta para tarefas agendadas: `https://kryisdash-bonrs7pq.manus.space`
+- [ ] Criar guia de configuração das tarefas agendadas com endpoints e formatos corretos
+- [ ] Verificar e marcar itens da seção "Evolução v3" que já foram implementados
